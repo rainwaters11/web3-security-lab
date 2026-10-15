@@ -1,27 +1,86 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Web3 Security Lab</title><link rel="stylesheet" href="/style.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Web3 Security Lab</title>
+  <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-  <div class="shell">
-    <aside class="rail">
-      <a class="brand" href="/" aria-label="Web3 Security Lab home"><span class="mark">⌁</span> Security Lab<span class="brand-dot">.</span></a>
-      <div class="eyebrow side-label">YOUR WORKSPACE</div>
-      <nav aria-label="Main navigation"><a class="active" href="#lab">◫ <span>Audit lab</span></a><a href="#notebook">▤ <span>Finding notebook</span></a><a href="#progress">◷ <span>Progress</span></a></nav>
-      <div class="side-bottom"><span class="status-light"></span> LOCAL TRAINING SPACE <p>Your notes stay in this browser. Export a copy to keep them.</p></div>
+  <div class="layout">
+    <aside class="left">
+      <h1>Web3 Security Lab</h1>
+      <p id="lesson-title" class="muted">Loading lesson…</p>
+
+      <label for="support-level">Support level</label>
+      <select id="support-level">
+        <option value="guided">Guided</option>
+        <option value="practice">Practice</option>
+        <option value="independent">Independent</option>
+      </select>
+
+      <h2>Scenario family</h2>
+      <div id="scenario-list" class="scenario-list" role="list"></div>
+      <button id="review-queue" class="btn secondary">Refresh review queue</button>
+      <div id="queue" class="queue" aria-live="polite"></div>
     </aside>
-    <main id="lab">
-      <header class="topbar"><span class="eyebrow">WEB3 SECURITY / FOUNDATION TRACK</span><span class="badge">DAY 01 · SOLIDITY</span></header>
-      <section class="hero"><div><p class="eyebrow green">THE PRACTICE GROUND</p><h1>Follow the claim.<br><em>Find the proof.</em></h1><p>Build the habit behind a credible audit: map the system, question its assumptions, and test what you think you found.</p></div><div class="hero-index">01<span>/ 08</span><small>FOUNDATION<br>CHALLENGES</small></div></section>
-      <div class="work-grid">
-        <section class="panel challenge"><div class="panel-head"><div><p class="eyebrow">CURRENT CHALLENGE</p><h2 id="challenge-title">Loading challenge…</h2></div><span class="tag">FOUNDATION</span></div><p id="scenario" class="intro"></p><div class="meta"><span>◷ 30–45 MIN</span><span>◇ SOLIDITY</span><span>◎ TRAINING CONTRACT</span></div><div class="code-head"><span>SharedVault.sol</span><span>READ ONLY</span></div><pre><code id="source"></code></pre><div class="guide"><strong>Start here</strong><ul id="prompts"></ul></div></section>
-        <div class="right-stack"><section class="panel mentor"><div class="panel-head"><div><p class="eyebrow green">SECURITY MENTOR</p><h2>Think it through.</h2></div><div class="mentor-icon">✳</div></div><p>Your mentor asks for reasoning before revealing hints. It cannot verify a vulnerability without a test.</p><label class="toggle"><input id="use-ai" type="checkbox"> Use AI mentor when a server key is configured</label><div id="coach-thread" class="coach-thread" aria-live="polite"><div class="bubble">Before looking for a bug, name one asset and one actor who can change it.</div></div><button id="ask" class="button secondary">Ask the mentor about my notes ↗</button><small id="coach-status"></small></section>
-        <section class="panel notes" id="notebook"><div class="panel-head"><div><p class="eyebrow">YOUR ANALYSIS</p><h2>Finding notebook</h2></div><span id="saved">NOT SAVED</span></div><label for="analysis">What do you suspect? Include the actor, rule, call path, and evidence you would seek.</label><textarea id="analysis" placeholder="I think… because… The invariant is… I would test it by…"></textarea><label for="invariant">Invariant to test</label><input id="invariant" placeholder="Only an authorized actor can…"><label for="evidence">Test evidence / result</label><textarea id="evidence" class="short" placeholder="Describe the Foundry test and its result. A hypothesis is not a confirmed finding."></textarea><div class="actions"><button id="save" class="button primary">Save notes</button><button id="export" class="button link">Export notes ↓</button></div></section></div>
-      </div>
-      <section class="panel reveal"><div><p class="eyebrow">WHEN YOU'VE MADE AN ATTEMPT</p><h2>Check your reasoning</h2><p>Unlock three progressive hints, then compare your analysis with the reference findings. The reference is a training answer, not proof of your own test.</p></div><div class="reveal-actions"><button id="hint" class="button secondary">Show next hint</button><button id="reference" class="button secondary">Compare findings</button></div><div id="revealed" aria-live="polite"></div></section>
-      <section id="progress" class="foot"><span>WEB3 SECURITY LAB / 001</span><span>THINK → TEST → DOCUMENT</span></section>
+
+    <main class="main">
+      <section class="card">
+        <h2 id="scenario-title">Scenario</h2>
+        <p id="scenario-summary"></p>
+        <p><strong>Local test:</strong> <code id="scenario-test"></code></p>
+        <pre><code id="source"></code></pre>
+      </section>
+
+      <section class="card">
+        <h2>Your attempt</h2>
+        <label for="prediction">Prediction (required before reveal)</label>
+        <textarea id="prediction" placeholder="What do you predict and why?"></textarea>
+
+        <label for="invariant">Invariant (required before reveal)</label>
+        <textarea id="invariant" placeholder="What rule must remain true?"></textarea>
+
+        <label for="evidence">Test evidence</label>
+        <textarea id="evidence" placeholder="What command/test path and what result?"></textarea>
+
+        <label for="explanation">Trace explanation in your own words</label>
+        <textarea id="explanation" placeholder="Explain the call flow and what it did not establish."></textarea>
+
+        <div class="row">
+          <button id="save" class="btn">Save attempt</button>
+          <button id="hint" class="btn secondary">Next hint</button>
+          <button id="ask" class="btn secondary">Coach prompt</button>
+          <button id="reveal" class="btn">Reveal outcome</button>
+        </div>
+
+        <p id="saved" class="muted">Unsaved</p>
+        <div id="coach" class="result"></div>
+        <div id="hint-box" class="result"></div>
+        <div id="outcome" class="result"></div>
+      </section>
     </main>
-  </div><script src="/app.js" defer></script>
-</body></html>
+
+    <aside class="right">
+      <h2>Glossary</h2>
+      <input id="term-search" type="search" placeholder="Search term or concept">
+      <select id="term-category">
+        <option value="all">All categories</option>
+      </select>
+      <div id="term-list" class="term-list" role="list"></div>
+      <section id="term-panel" class="card" aria-live="polite">
+        <h3 id="term-name">Select a term</h3>
+        <p id="term-definition"></p>
+        <p id="term-technical"></p>
+        <p id="term-example"></p>
+        <p id="term-why"></p>
+        <p id="term-misunderstanding"></p>
+        <p id="term-related"></p>
+        <button id="bookmark" class="btn secondary" disabled>Bookmark term</button>
+      </section>
+    </aside>
+  </div>
+
+  <script src="/app.js" defer></script>
+</body>
+</html>
