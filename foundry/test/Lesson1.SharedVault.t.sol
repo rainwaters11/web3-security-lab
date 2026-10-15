@@ -37,6 +37,10 @@ contract ReenterOnceAttacker {
         vault.withdraw(1 ether);
     }
 
+    function maxConfiguredReentries() external pure returns (uint256) {
+        return 1;
+    }
+
     receive() external payable {
         if (!entered) {
             entered = true;
@@ -61,6 +65,7 @@ contract Lesson1SharedVaultTest {
         require(address(vault).balance == 3 ether, "setup vault ETH mismatch");
         require(vault.balanceOf(address(alice)) == 1 ether, "setup alice mismatch");
         require(vault.balanceOf(address(bob)) == 2 ether, "setup bob mismatch");
+        require(alice.maxConfiguredReentries() == 1, "attacker must reenter exactly once");
     }
 
     function test_NormalWithdrawal_WithinBalance_Succeeds() public {
@@ -72,18 +77,34 @@ contract Lesson1SharedVaultTest {
     }
 
     function test_ExcessWithdrawal_RevertsAndStateUnchanged() public {
-        (bool ok, ) = address(bob).call(abi.encodeWithSignature("withdrawFromVault(uint256)", 3 ether));
-        require(!ok, "excess withdrawal should revert");
+        bool sawInsufficient = false;
 
+        try bob.withdrawFromVault(3 ether) {
+            revert("excess withdrawal should revert");
+        } catch Error(string memory reason) {
+            sawInsufficient = keccak256(bytes(reason)) == keccak256(bytes("Insufficient balance"));
+        } catch {
+            revert("expected Insufficient balance error");
+        }
+
+        require(sawInsufficient, "expected Insufficient balance revert reason");
         require(vault.balanceOf(address(alice)) == 1 ether, "alice recorded balance should remain 1 ETH");
         require(vault.balanceOf(address(bob)) == 2 ether, "bob recorded balance should remain 2 ETH");
         require(address(vault).balance == 3 ether, "vault ETH should remain 3 ETH");
     }
 
     function test_ReentrantWithdrawal_AttemptRevertsAndStateRestored() public {
-        (bool ok, ) = address(alice).call(abi.encodeWithSignature("attackSingleReentry()"));
-        require(!ok, "single-reentry theft attempt should revert");
+        bool sawArithmeticPanic = false;
 
+        try alice.attackSingleReentry() {
+            revert("single-reentry theft attempt should panic");
+        } catch Panic(uint256 code) {
+            sawArithmeticPanic = (code == 0x11);
+        } catch {
+            revert("expected Panic(0x11)");
+        }
+
+        require(sawArithmeticPanic, "expected arithmetic panic 0x11");
         require(vault.balanceOf(address(alice)) == 1 ether, "alice recorded balance should remain 1 ETH");
         require(vault.balanceOf(address(bob)) == 2 ether, "bob recorded balance should remain 2 ETH");
         require(address(vault).balance == 3 ether, "vault ETH should remain 3 ETH");

@@ -9,27 +9,37 @@
 - No scenario hint consumed yet in this run; prediction was provided directly.
 
 ### Invariant and test evidence
-- Invariant: A transaction that reverts must not leave mutated recorded balances or reduced vault ETH for this scenario setup.
-- Prediction (from user):
-  - Alice deposits 1 ETH and reenters once during `withdraw(1 ether)`.
-  - Bob deposits 2 ETH.
-  - Inner withdrawal reduces Alice recorded balance to zero.
-  - Outer subtraction then underflows and reverts.
-- Intended command (focused trace):
-  - `cd /home/runner/work/web3-security-lab/web3-security-lab/foundry && forge test --match-test test_ReentrantWithdrawal_AttemptRevertsAndStateRestored -vvvv`
-- Observed result in this environment: **blocked** (tooling unavailable).
-  - `forge --version` -> `forge: command not found`
-  - Foundry bootstrap script fetch failed due DNS resolution (`foundry.paradigm.xyz`).
-  - Source install attempt failed when build script tried to fetch Solidity release index (`https://binaries.soliditylang.org/linux-amd64/list.json`) and DNS resolution failed.
-- Limitation: Because Forge could not run in this sandbox, no local Foundry trace was produced yet. Scenario 3 assertions are implemented in test code but pending execution in an environment with Forge + network access to required release metadata.
+- Invariant: A transaction that reverts must not leave mutated recorded balances or reduced vault ETH for this setup.
+
+### Predicted outcome (not observed evidence)
+- Alice (attacker contract) deposits 1 ETH so `balanceOf[address(alice)] == 1 ether`.
+- Bob deposits 2 ETH so `balanceOf[address(bob)] == 2 ether`.
+- Vault starts at 3 ETH.
+- Alice receive() reenters exactly once.
+- Prediction: transaction panics on arithmetic underflow in the outer subtraction and reverts.
+
+### Observed evidence in this environment
+- Solidity execution status: **BLOCKED / NOT YET VERIFIED**.
+- Attempted checks:
+  - `forge --version` -> `/bin/bash: forge: command not found`
+- Prior install attempts were blocked by DNS/network restrictions to Foundry/Solidity binary hosts in this runner.
+- No real Forge trace was produced in this environment, so no on-chain execution trace is claimed here.
+
+### Command(s) for your local machine (to produce observed evidence)
+- `forge --version`
+- `cd foundry`
+- `forge config | rg "solc_version"`
+- `forge test --match-test test_NormalWithdrawal_WithinBalance_Succeeds -vvv`
+- `forge test --match-test test_ExcessWithdrawal_RevertsAndStateUnchanged -vvv`
+- `forge test --match-test test_ReentrantWithdrawal_AttemptRevertsAndStateRestored -vvvv`
 
 ### False positives and corrections
 - Reentrant control flow alone is not equivalent to successful theft.
-- This scenario is designed to test and potentially reject a theft claim under the current compiler arithmetic behavior and exact call sequence.
+- Predicted behavior must stay labeled predicted until local test/trace evidence confirms it.
 
 ### What you can explain without assistance
-- Difference between a reentrant call path and a reproduced theft.
-- Difference between recorded balances (`balanceOf`) and vault real ETH balance (`address(this).balance`).
+- Difference between reentrant call flow and reproduced theft.
+- Difference between recorded balances (`balanceOf`) and actual contract ETH (`address(this).balance`).
 
 ### Follow-up exercise
-- Run the focused Forge test in a network-enabled local environment and walk through the full trace line by line, then compare with an intentionally exploitable variant in Lesson 1 scenario 4.
+- Run scenario 1–3 commands locally and record exact pass/fail outputs and the real scenario-3 trace location of `Panic(0x11)`.

@@ -5,9 +5,11 @@ import { dirname, join } from 'node:path';
 
 const root = dirname(fileURLToPath(import.meta.url));
 const port = Number(process.env.PORT || 3000);
+
 const files = new Map([
   ['/', ['index.html', 'text/html; charset=utf-8']],
   ['/app.js', ['app.js', 'text/javascript; charset=utf-8']],
+  ['/lessonState.mjs', ['lessonState.mjs', 'text/javascript; charset=utf-8']],
   ['/style.css', ['style.css', 'text/css; charset=utf-8']]
 ]);
 
@@ -37,11 +39,33 @@ contract SharedVault {
     }
 }`;
 
+const glossary = [
+  { id: 'invariant', term: 'invariant', group: 'general', category: 'security-reasoning', definition: 'A rule that must remain true before and after relevant actions.', analogy: 'Like a safety rule that must hold at every checkpoint.', technicalMeaning: 'A required property over contract state transitions.', example: 'A user should not spend the same recorded balance twice.', whyImportant: 'Findings are defendable when tied to violated invariants.', misunderstanding: 'Writing an invariant does not enforce it automatically.', related: ['precondition', 'postcondition', 'solvency'] },
+  { id: 'trust-boundary', term: 'trust boundary', group: 'general', category: 'security-reasoning', definition: 'Where control/data crosses into code you do not control.', analogy: 'Handing keys to someone else briefly.', technicalMeaning: 'Execution crossing trusted to potentially adversarial logic.', example: 'withdraw() hands control to msg.sender.call.', whyImportant: 'Many exploits happen where assumptions cross boundaries.', misunderstanding: 'External calls can be safe if state transitions are robust.', related: ['call', 'reentrancy'] },
+  { id: 'authorization', term: 'authorization', group: 'general', category: 'security-reasoning', definition: 'Rules deciding who may perform an action.', analogy: 'A lock accepting only approved keys.', technicalMeaning: 'Policy checks over caller identity/role.', example: 'changeCurator() has no authorization check.', whyImportant: 'Missing checks can expose critical state.', misunderstanding: 'Authentication is not authorization.', related: ['access control', 'msg.sender'] },
+  { id: 'msg-sender', term: 'msg.sender', group: 'solidity-feature', category: 'reading-contract', definition: 'Immediate caller for the current call frame.', analogy: 'Current person at the service counter.', technicalMeaning: 'EVM context caller address.', example: 'balanceOf[msg.sender] indexes credit by caller.', whyImportant: 'Permission and accounting checks depend on caller identity.', misunderstanding: 'msg.sender can differ across nested calls.', related: ['call', 'authentication'] },
+  { id: 'msg-value', term: 'msg.value', group: 'solidity-feature', category: 'reading-contract', definition: 'Wei sent with current call.', analogy: 'Cash sent with a request.', technicalMeaning: 'EVM callvalue for the current frame.', example: 'deposit() records msg.value credit.', whyImportant: 'Incorrect value handling breaks solvency assumptions.', misunderstanding: 'msg.value is per-call, not persistent balance.', related: ['payable', 'wei'] },
+  { id: 'require', term: 'require', group: 'solidity-feature', category: 'reading-contract', definition: 'Condition guard that reverts if false.', analogy: 'Gate that denies invalid entry.', technicalMeaning: 'Conditional revert primitive with optional reason.', example: 'require(balanceOf[msg.sender] >= amount, "Insufficient balance").', whyImportant: 'Guards protect state transitions.', misunderstanding: 'A require protects only where executed.', related: ['revert', 'precondition'] },
+  { id: 'balanceof-name', term: 'balanceOf', group: 'developer-name', category: 'reading-contract', definition: 'Developer-chosen name, not a Solidity keyword.', analogy: 'Spreadsheet column label chosen by author.', technicalMeaning: 'Mapping(address => uint256) for contract-specific credits.', example: 'In SharedVault balanceOf is internal credit, not guaranteed wallet ETH.', whyImportant: 'Credit and real ETH are different quantities.', misunderstanding: 'balanceOf here is not automatically ERC-20 behavior.', related: ['mapping', 'address(this).balance'] },
+  { id: 'curator-name', term: 'curator', group: 'developer-name', category: 'reading-contract', definition: 'Role variable name chosen by developer.', analogy: 'A role title in an org chart.', technicalMeaning: 'Address variable intended to represent role authority.', example: 'SharedVault sets curator in constructor and allows changeCurator.', whyImportant: 'Role names matter only if authorization enforces them.', misunderstanding: 'Naming a role does not enforce permission.', related: ['authorization', 'access control'] },
+  { id: 'withdraw-name', term: 'withdraw', group: 'developer-name', category: 'reading-contract', definition: 'Developer-chosen function name.', analogy: 'Button text; behavior depends on implementation.', technicalMeaning: 'Function sending ETH and mutating accounting state.', example: 'SharedVault.withdraw external-calls before balance decrement.', whyImportant: 'Security depends on code path, not naming.', misunderstanding: 'A function named withdraw is not automatically safe.', related: ['call', 'checks-effects-interactions'] },
+  { id: 'reentrancy', term: 'reentrancy', group: 'general', category: 'security-reasoning', definition: 'External code re-enters before prior execution finishes.', analogy: 'Rejoining checkout before first purchase is finalized.', technicalMeaning: 'Nested call flow exploiting in-progress state assumptions.', example: 'receive() calls withdraw again before outer withdraw completes.', whyImportant: 'Can violate one-time accounting assumptions.', misunderstanding: 'Reentrant flow can exist even when final transaction reverts.', related: ['trust boundary', 'call stack'] },
+  { id: 'checked-arithmetic', term: 'checked arithmetic', group: 'general', category: 'security-reasoning', definition: 'Solidity 0.8+ default arithmetic reverts on overflow/underflow.', analogy: 'Counter that rejects negative inventory.', technicalMeaning: 'Compiler-inserted arithmetic safety checks in checked context.', example: 'Outer subtraction can panic after inner subtraction.', whyImportant: 'Exploitability differs from older unchecked defaults.', misunderstanding: 'Checked arithmetic does not eliminate all logic bugs.', related: ['underflow', 'unchecked arithmetic'] },
+  { id: 'trace', term: 'execution trace', group: 'general', category: 'testing-evidence', definition: 'Stepwise record of call flow and failures/successes.', analogy: 'Flight recorder for execution.', technicalMeaning: 'Ordered call tree and revert/success events.', example: 'Shows outer withdraw -> receive -> inner withdraw -> panic.', whyImportant: 'Supports evidence-based findings and false-positive rejection.', misunderstanding: 'One trace proves one path, not all paths.', related: ['call stack', 'proof of concept'] },
+  { id: 'false-positive', term: 'false positive', group: 'general', category: 'testing-evidence', definition: 'A suspected issue not confirmed by valid reproduction.', analogy: 'Alarm triggered by steam instead of fire.', technicalMeaning: 'Claim lacking reproducible evidence under correct assumptions.', example: 'Assuming all external-call-before-update patterns always steal funds.', whyImportant: 'Auditors must separate suspected from reproduced findings.', misunderstanding: 'Rejecting one claim does not prove total safety.', related: ['suspected finding', 'reproduced finding'] }
+];
+
 const lesson = {
   id: 'lesson-1',
   title: 'Lesson 1 · Withdrawal behavior under external calls',
-  objective: 'Distinguish reentrant control flow from successful theft, and use tests to confirm or reject claims.',
+  objective: 'Use predictions, invariants, and tests to distinguish risky control flow from reproduced theft.',
+  deploymentMode: 'local-single-user',
+  deploymentModeNote: 'This build is intended for local single-user learning. Browser localStorage is device/browser-profile scoped.',
   supportLevels: ['guided', 'practice', 'independent'],
+  solidityExecution: {
+    status: 'BLOCKED / NOT YET VERIFIED',
+    reason: 'Foundry/solc execution is blocked in this environment; scenario outcomes are expected/predicted until local Forge run evidence is provided.'
+  },
   scenarios: [
     {
       id: 's1-normal-withdrawal',
@@ -58,16 +82,16 @@ const lesson = {
         'Call does not revert.'
       ],
       hints: [
-        'Identify precondition: the caller must have enough recorded balance.',
-        'Track recorded balance and real ETH separately.',
-        'Write assertions for both storage and actual ETH balance.'
+        'Identify the precondition: sufficient recorded balance.',
+        'Track recorded credit and real ETH separately.',
+        'Assert both storage and vault ETH outcomes.'
       ],
-      traceQuestion: 'Which line updates storage and which line transfers ETH in this successful path?',
-      limitQuestion: 'What does one successful path not prove about adversarial callers?',
+      traceQuestion: 'Which call frame performs the ETH transfer and which frame updates balanceOf?',
+      limitQuestion: 'What does one successful benign path not establish about adversarial paths?',
       outcome: {
-        label: 'safe-behavior',
-        status: 'reproduced',
-        result: 'A normal withdrawal within balance succeeds and preserves accounting for this path.'
+        label: 'expected-safe-path',
+        status: 'not-yet-verified',
+        result: 'Expected: normal within-balance withdrawal succeeds with matching accounting updates.'
       }
     },
     {
@@ -80,21 +104,21 @@ const lesson = {
       source: sharedVaultSource,
       localTest: 'forge test --match-test test_ExcessWithdrawal_RevertsAndStateUnchanged -vvv',
       expectedAssertions: [
-        'Call reverts with insufficient-balance condition.',
+        'Call reverts with "Insufficient balance" guard.',
         'Recorded balances remain unchanged.',
         'Vault ETH remains unchanged.'
       ],
       hints: [
-        'The guard check runs before any external call.',
-        'When a call reverts, state in reverted scope rolls back.',
-        'Assert no storage mutation after revert.'
+        'The require guard runs before external interaction.',
+        'A revert should roll back writes in reverted scope.',
+        'Check both users and vault balance post-revert.'
       ],
-      traceQuestion: 'At what point does execution stop and why?',
-      limitQuestion: 'What does this revert test not establish about reentrancy paths?',
+      traceQuestion: 'Where does execution stop in this path and which side-effects are prevented?',
+      limitQuestion: 'Why does this guard-path test not prove reentrancy safety?',
       outcome: {
-        label: 'safe-behavior',
-        status: 'reproduced',
-        result: 'Requesting above recorded balance reverts and leaves state unchanged.'
+        label: 'expected-safe-path',
+        status: 'not-yet-verified',
+        result: 'Expected: excess withdrawal reverts and state remains unchanged.'
       }
     },
     {
@@ -107,22 +131,22 @@ const lesson = {
       source: sharedVaultSource,
       localTest: 'forge test --match-test test_ReentrantWithdrawal_AttemptRevertsAndStateRestored -vvvv',
       expectedAssertions: [
-        'Attempted double withdrawal transaction reverts.',
-        'Alice recorded balance stays 1 ETH.',
-        'Bob recorded balance stays 2 ETH.',
-        'Vault actual ETH stays 3 ETH.'
+        'Attempted double withdrawal transaction reverts with arithmetic panic 0x11.',
+        'Alice recorded balance remains 1 ETH.',
+        'Bob recorded balance remains 2 ETH.',
+        'Vault actual ETH remains 3 ETH.'
       ],
       hints: [
-        'Reentrancy means control returned to attacker code before outer function finished.',
-        'Under Solidity 0.8.x, arithmetic underflow reverts by default unless unchecked.',
-        'A reverted top-level transaction rolls back vault storage and ETH transfers in that scope.'
+        'Reentrancy means control returns to attacker code before outer function completes.',
+        'Solidity 0.8.x uses checked arithmetic by default (without unchecked blocks).',
+        'A reverted top-level transaction rolls back storage and ETH movement in that scope.'
       ],
-      traceQuestion: 'Which nested call succeeds before the outer call reverts, and what rollback do you observe?',
-      limitQuestion: 'Why does this failed theft attempt not prove the entire contract is secure?',
+      traceQuestion: 'If you run a real trace, where does Panic(0x11) occur and what gets rolled back?',
+      limitQuestion: 'Why does a failed theft attempt not prove full-contract security?',
       outcome: {
-        label: 'suspected-vuln-rejected-by-test',
-        status: 'reproduced',
-        result: 'The call path is reentrant, but this specific theft attempt reverts due to checked underflow in outer subtraction.'
+        label: 'expected-revert-path',
+        status: 'not-yet-verified',
+        result: 'Predicted: reentrant call flow occurs, but transaction reverts from checked underflow in outer subtraction.'
       }
     },
     {
@@ -132,7 +156,7 @@ const lesson = {
       title: 'Exploitable training variant',
       summary: 'Deliberately vulnerable variant where theft succeeds in local test.',
       contractName: 'SharedVaultExploitLab',
-      source: '// Added in phase 2 after scenarios 1–3 are fully verified.',
+      source: '// Planned for phase 2 after scenarios 1–3 are fully verified locally.',
       localTest: 'To be enabled in phase 2.',
       expectedAssertions: ['To be added in phase 2.'],
       hints: ['Phase 2 scenario.'],
@@ -147,7 +171,7 @@ const lesson = {
       title: 'Remediated variant',
       summary: 'Accounting update before external call; attack fails while normal withdrawal still works.',
       contractName: 'SharedVaultFixed',
-      source: '// Added in phase 2 after scenarios 1–3 are fully verified.',
+      source: '// Planned for phase 2 after scenarios 1–3 are fully verified locally.',
       localTest: 'To be enabled in phase 2.',
       expectedAssertions: ['To be added in phase 2.'],
       hints: ['Phase 2 scenario.'],
@@ -160,9 +184,9 @@ const lesson = {
       order: 6,
       status: 'planned',
       title: 'Blind transfer challenge',
-      summary: 'Unfamiliar names and changed call structure, no vulnerability label or initial hints.',
+      summary: 'Unfamiliar names and changed call structure, without vulnerability label or initial hints.',
       contractName: 'BlindTransferChallenge',
-      source: '// Added in phase 2 after scenarios 1–3 are fully verified.',
+      source: '// Planned for phase 2 after scenarios 1–3 are fully verified locally.',
       localTest: 'To be enabled in phase 2.',
       expectedAssertions: ['To be added in phase 2.'],
       hints: ['Phase 2 scenario.'],
@@ -170,24 +194,9 @@ const lesson = {
       limitQuestion: 'Phase 2 scenario.',
       outcome: { label: 'planned', status: 'suspected', result: 'Planned for phase 2.' }
     }
-  ]
+  ],
+  glossary
 };
-
-const glossary = [
-  { id: 'invariant', term: 'invariant', group: 'general', category: 'security-reasoning', definition: 'A rule that must remain true before and after relevant actions.', analogy: 'Like a safety rule that must hold at every checkpoint.', technicalMeaning: 'A required property over contract state transitions.', example: 'In SharedVault: a user should not spend the same recorded balance twice.', whyImportant: 'Findings become defensible when tied to violated invariants.', misunderstanding: 'Writing an invariant down does not enforce it automatically.', related: ['precondition', 'postcondition', 'solvency'] },
-  { id: 'trust-boundary', term: 'trust boundary', group: 'general', category: 'security-reasoning', definition: 'A boundary where control or data crosses into code you do not control.', analogy: 'Passing your keys to someone else temporarily.', technicalMeaning: 'Execution crosses from trusted logic to potentially adversarial code.', example: 'In withdraw(), control leaves SharedVault at msg.sender.call{value: amount}("").', whyImportant: 'Many exploits happen at boundaries where assumptions break.', misunderstanding: 'External calls are not always unsafe, but they need careful state handling.', related: ['call', 'reentrancy', 'checks-effects-interactions'] },
-  { id: 'authorization', term: 'authorization', group: 'general', category: 'security-reasoning', definition: 'Rules deciding who is allowed to perform an action.', analogy: 'A lock that only accepts certain keys.', technicalMeaning: 'Policy checks over caller identity/role for protected operations.', example: 'changeCurator() in SharedVault currently has no authorization check.', whyImportant: 'Missing authorization can let attackers change critical state.', misunderstanding: 'Authentication (who you are) is not the same as authorization (what you may do).', related: ['authentication', 'access control', 'msg.sender'] },
-  { id: 'msg-sender', term: 'msg.sender', group: 'solidity-feature', category: 'reading-contract', definition: 'The immediate caller of the current function.', analogy: 'The person currently at the front desk window.', technicalMeaning: 'EVM context variable containing caller address for this call frame.', example: 'balanceOf[msg.sender] tracks credit for the current caller.', whyImportant: 'Authorization and accounting usually depend on caller identity.', misunderstanding: 'msg.sender can change across call frames during nested calls.', related: ['address', 'call', 'authentication'] },
-  { id: 'msg-value', term: 'msg.value', group: 'solidity-feature', category: 'reading-contract', definition: 'Amount of wei sent with the call.', analogy: 'Cash handed over during a transaction.', technicalMeaning: 'EVM callvalue for the active message call frame.', example: 'deposit() adds msg.value to balanceOf[msg.sender].', whyImportant: 'Incorrect value handling can break accounting and solvency.', misunderstanding: 'msg.value is per-call, not a persistent user balance.', related: ['payable', 'wei', 'ETH'] },
-  { id: 'require', term: 'require', group: 'solidity-feature', category: 'reading-contract', definition: 'Checks a condition and reverts if false.', analogy: 'A guard that denies entry when a rule is broken.', technicalMeaning: 'Conditional revert primitive with optional reason string.', example: 'require(balanceOf[msg.sender] >= amount, "Insufficient balance").', whyImportant: 'Guards are core to access control and safe state transitions.', misunderstanding: 'A require only protects the path where it is executed.', related: ['revert', 'precondition'] },
-  { id: 'balanceof-name', term: 'balanceOf', group: 'developer-name', category: 'reading-contract', definition: 'A developer-chosen name, not a Solidity keyword.', analogy: 'A spreadsheet column label chosen by the author.', technicalMeaning: 'Mapping(address => uint256) storing contract-specific credits.', example: 'In SharedVault, balanceOf records user credit, not guaranteed wallet ETH.', whyImportant: 'Confusing recorded credit with actual funds causes analysis mistakes.', misunderstanding: 'balanceOf here is not the ERC-20 standard unless implemented as such.', related: ['mapping', 'solvency', 'address(this).balance'] },
-  { id: 'curator-name', term: 'curator', group: 'developer-name', category: 'reading-contract', definition: 'A role variable name chosen by the contract author.', analogy: 'A job title written by the team.', technicalMeaning: 'Address state variable intended to represent an authority role.', example: 'SharedVault stores curator and allows updates via changeCurator().', whyImportant: 'Role variables matter only if permissions enforce them.', misunderstanding: 'Naming something admin-like does not enforce privilege checks.', related: ['authorization', 'access control'] },
-  { id: 'withdraw-name', term: 'withdraw', group: 'developer-name', category: 'reading-contract', definition: 'A function name chosen by the developer.', analogy: 'A button label; behavior depends on implementation.', technicalMeaning: 'External function that sends ETH and updates internal accounting.', example: 'SharedVault.withdraw performs external call before decrementing balance.', whyImportant: 'Security properties depend on function order, not function names.', misunderstanding: 'A function named withdraw is not automatically safe or standard.', related: ['call', 'checks-effects-interactions', 'reentrancy'] },
-  { id: 'reentrancy', term: 'reentrancy', group: 'general', category: 'security-reasoning', definition: 'A call pattern where external code re-enters a function before prior execution completes.', analogy: 'Re-entering a store checkout line before your first checkout is finalized.', technicalMeaning: 'Nested execution into vulnerable state-transition windows across call frames.', example: 'Attacker receive() calls vault.withdraw again before outer withdrawal subtracts balance.', whyImportant: 'Can break assumptions about one-time state updates.', misunderstanding: 'Reentrant call flow exists even when theft attempt ultimately reverts.', related: ['trust boundary', 'call stack', 'checks-effects-interactions'] },
-  { id: 'checked-arithmetic', term: 'checked arithmetic', group: 'general', category: 'security-reasoning', definition: 'Default Solidity 0.8+ arithmetic behavior that reverts on overflow/underflow.', analogy: 'Calculator that refuses impossible negative stock counts.', technicalMeaning: 'Compiler-inserted overflow checks for arithmetic in checked context.', example: 'Outer balance subtraction can revert after inner subtraction already consumed balance.', whyImportant: 'Changes exploitability compared with older unchecked arithmetic defaults.', misunderstanding: 'Checked arithmetic does not remove all logic bugs or reentrancy risks.', related: ['underflow', 'unchecked arithmetic', 'compiler assumptions'] },
-  { id: 'trace', term: 'execution trace', group: 'general', category: 'testing-evidence', definition: 'Step-by-step call and state flow recorded during execution.', analogy: 'A flight recorder for function calls.', technicalMeaning: 'Ordered call tree with op-level/context-level events and reverts.', example: 'Trace shows outer withdraw -> attacker receive -> inner withdraw -> outer underflow revert.', whyImportant: 'Supports evidence-based findings and helps reject false positives.', misunderstanding: 'A trace is evidence for that path, not proof of all-path behavior.', related: ['call stack', 'proof of concept', 'false positive'] },
-  { id: 'false-positive', term: 'false positive', group: 'general', category: 'testing-evidence', definition: 'A suspected issue that tests/evidence fail to confirm.', analogy: 'A fire alarm triggered by steam, not fire.', technicalMeaning: 'Reported vulnerability claim not reproducible under correct assumptions.', example: 'Assuming any external call before update always yields theft in SharedVault.', whyImportant: 'Auditors must separate suspected from reproduced findings.', misunderstanding: 'False positive does not mean no risk exists anywhere else.', related: ['suspected finding', 'reproduced finding', 'invariant'] }
-];
 
 function scenarioById(id) {
   return lesson.scenarios.find(s => s.id === id);
@@ -196,8 +205,7 @@ function scenarioById(id) {
 function stripOutcomesForClient() {
   return {
     ...lesson,
-    scenarios: lesson.scenarios.map(({ outcome, ...rest }) => rest),
-    glossary
+    scenarios: lesson.scenarios.map(({ outcome, ...rest }) => rest)
   };
 }
 
@@ -221,31 +229,35 @@ function shortCoach(payload) {
   const evidence = String(payload.evidence || '').trim();
   const supportLevel = String(payload.supportLevel || 'guided');
 
-  if (!prediction) return 'Start with a prediction: what do you think will happen and why?';
-  if (!invariant) return 'Now state one invariant the scenario should preserve.';
-  if (supportLevel === 'guided' && evidence.length < 15) return 'Good start. Add a concrete test path: caller, function order, expected revert/success, and balances.';
-  if (supportLevel === 'practice' && evidence.length < 15) return 'Write the minimal assertions that would prove or disprove your claim.';
-  if (supportLevel === 'independent' && evidence.length < 15) return 'Submit your evidence-focused test plan before requesting hints.';
-  return 'Before revealing outcome, explain one thing this test does NOT establish about overall contract security.';
+  if (!prediction) return 'Start with a prediction: what do you think happens and why?';
+  if (!invariant) return 'Now write one invariant that should remain true.';
+  if (supportLevel === 'independent' && evidence.length < 20) return 'Independent mode: submit your evidence plan before requesting outcome.';
+  if (evidence.length < 20) return 'Add concrete evidence: caller, call sequence, expected assertions, and what would falsify your claim.';
+  return 'Before reveal, state one limitation: what this single test cannot establish.';
 }
 
 function buildReviewQueue(attempts) {
   const queue = [];
   for (const attempt of attempts) {
-    if (!attempt || !attempt.scenarioId) continue;
+    if (!attempt?.scenarioId) continue;
     const scenario = scenarioById(attempt.scenarioId);
     if (!scenario) continue;
+
+    if (!attempt.submittedAt && attempt.supportLevel === 'independent') {
+      queue.push({ type: 'submission-missing', scenarioId: scenario.id, prompt: `Submit your ${scenario.title} attempt before requesting hidden outcome.` });
+    }
     if ((attempt.outcomeStatus || '') !== 'reproduced') {
-      queue.push({ type: 'scenario-repeat', scenarioId: scenario.id, prompt: `Retry ${scenario.title} in a different support mode and rewrite invariant in your own words.` });
+      queue.push({ type: 'resurface', scenarioId: scenario.id, prompt: `Revisit ${scenario.title} and re-test with explicit invariant assertions.` });
     }
-    if ((attempt.explanation || '').trim().length < 20) {
-      queue.push({ type: 'explanation-gap', scenarioId: scenario.id, prompt: `Explain ${scenario.title}: why did the trace support or reject your claim?` });
+    if (String(attempt.explanation || '').trim().length < 20) {
+      queue.push({ type: 'explain', scenarioId: scenario.id, prompt: `Explain the execution trace for ${scenario.title} in your own words.` });
     }
   }
+
   if (!queue.length) {
-    queue.push({ type: 'maintenance', scenarioId: 's3-reentrant-attempt-reverts', prompt: 'Revisit scenario 3 next session and explain why reentrancy in control flow did not equal successful theft in this setup.' });
+    queue.push({ type: 'maintenance', scenarioId: 's3-reentrant-attempt-reverts', prompt: 'Revisit scenario 3 later with a real forge trace and identify where panic 0x11 is emitted.' });
   }
-  return queue.slice(0, 6);
+  return queue.slice(0, 8);
 }
 
 export const server = createServer(async (req, res) => {
@@ -264,8 +276,14 @@ export const server = createServer(async (req, res) => {
 
       const prediction = String(data.prediction || '').trim();
       const invariant = String(data.invariant || '').trim();
+      const supportLevel = String(data.supportLevel || 'guided').trim();
+      const submitted = data.submitted === true;
+
       if (prediction.length < 20 || invariant.length < 20) {
         return json(res, 400, { error: 'Write both prediction and invariant (at least 20 characters each) before revealing outcome.' });
+      }
+      if (supportLevel === 'independent' && !submitted) {
+        return json(res, 400, { error: 'Independent mode keeps outcomes hidden until you submit your attempt.' });
       }
 
       return json(res, 200, {
@@ -276,7 +294,8 @@ export const server = createServer(async (req, res) => {
         expectedAssertions: scenario.expectedAssertions,
         traceQuestion: scenario.traceQuestion,
         limitQuestion: scenario.limitQuestion,
-        reminder: 'Do not generalize from one test. Track suspected vs reproduced vs remediated findings separately.'
+        solidityExecutionStatus: lesson.solidityExecution.status,
+        reminder: 'Do not generalize from one test path. Keep suspected, reproduced, and remediated findings separate.'
       });
     }
 
@@ -298,8 +317,9 @@ export const server = createServer(async (req, res) => {
         title: scenario.title,
         scenario: scenario.summary,
         source: scenario.source,
-        prompts: ['Provide prediction first.', 'State an invariant before reveal.', 'Write evidence and explain trace.'],
-        hints: scenario.hints
+        prompts: ['Write prediction first.', 'Write invariant before reveal.', 'Explain what your test does and does not establish.'],
+        hints: scenario.hints,
+        solidityExecutionStatus: lesson.solidityExecution.status
       });
     }
 

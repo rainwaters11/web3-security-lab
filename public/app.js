@@ -1,23 +1,16 @@
+import { createStorageRepo, normalizeLearnerId, searchGlossary, toggleBookmark, canReveal } from './lessonState.mjs';
+
 const $ = id => document.getElementById(id);
-const attemptsKey = 'web3-security-lab:lesson1:attempts:v2';
-const bookmarksKey = 'web3-security-lab:lesson1:bookmarks:v1';
 
 let lesson;
 let currentScenarioId;
 let termSelection;
 let hintsUsed = {};
+let storageRepo;
+let learnerId;
 
-function readAttempts() {
-  try { return JSON.parse(localStorage.getItem(attemptsKey) || '{}'); } catch { return {}; }
-}
-function writeAttempts(data) {
-  localStorage.setItem(attemptsKey, JSON.stringify(data));
-}
-function readBookmarks() {
-  try { return new Set(JSON.parse(localStorage.getItem(bookmarksKey) || '[]')); } catch { return new Set(); }
-}
-function writeBookmarks(set) {
-  localStorage.setItem(bookmarksKey, JSON.stringify([...set]));
+function scenario() {
+  return lesson.scenarios.find(s => s.id === currentScenarioId);
 }
 
 async function post(path, payload) {
@@ -31,13 +24,20 @@ async function post(path, payload) {
   return data;
 }
 
-function currentScenario() {
-  return lesson.scenarios.find(s => s.id === currentScenarioId);
+function getAttemptMap() {
+  return storageRepo.readAttempts();
+}
+
+function writeAttemptMap(map) {
+  storageRepo.writeAttempts(map);
+}
+
+function currentAttempt() {
+  return getAttemptMap()[currentScenarioId] || {};
 }
 
 function loadAttempt() {
-  const attempts = readAttempts();
-  const item = attempts[currentScenarioId] || {};
+  const item = currentAttempt();
   $('prediction').value = item.prediction || '';
   $('invariant').value = item.invariant || '';
   $('evidence').value = item.evidence || '';
@@ -48,7 +48,7 @@ function loadAttempt() {
 }
 
 function saveAttempt(extra = {}) {
-  const attempts = readAttempts();
+  const attempts = getAttemptMap();
   const existing = attempts[currentScenarioId] || {};
   attempts[currentScenarioId] = {
     ...existing,
@@ -62,14 +62,13 @@ function saveAttempt(extra = {}) {
     hintsUsed: hintsUsed[currentScenarioId] || 0,
     updatedAt: new Date().toISOString()
   };
-  writeAttempts(attempts);
+  writeAttemptMap(attempts);
   $('saved').textContent = 'Saved locally';
 }
 
 function renderScenarios() {
   const host = $('scenario-list');
   host.replaceChildren();
-
   for (const s of lesson.scenarios) {
     const btn = document.createElement('button');
     btn.className = `scenario-item ${s.id === currentScenarioId ? 'active' : ''}`;
@@ -86,7 +85,7 @@ function renderScenarios() {
 }
 
 function renderScenario() {
-  const s = currentScenario();
+  const s = scenario();
   $('scenario-title').textContent = s.title;
   $('scenario-summary').textContent = s.summary;
   $('scenario-test').textContent = s.localTest;
@@ -97,38 +96,10 @@ function renderScenario() {
   loadAttempt();
 }
 
-function renderGlossary() {
-  const q = $('term-search').value.trim().toLowerCase();
-  const cat = $('term-category').value;
-  const bookmarks = readBookmarks();
-  const host = $('term-list');
-  host.replaceChildren();
-
-  const terms = lesson.glossary.filter(t => {
-    const text = `${t.term} ${t.definition} ${t.technicalMeaning} ${t.category}`.toLowerCase();
-    const textMatch = !q || text.includes(q);
-    const catMatch = cat === 'all' || t.category === cat;
-    return textMatch && catMatch;
-  });
-
-  for (const t of terms) {
-    const button = document.createElement('button');
-    button.className = `term-item ${termSelection?.id === t.id ? 'active' : ''}`;
-    button.type = 'button';
-    button.setAttribute('role', 'listitem');
-    button.textContent = `${bookmarks.has(t.id) ? '★ ' : ''}${t.term} · ${t.group}`;
-    button.addEventListener('click', () => {
-      termSelection = t;
-      renderTermPanel();
-      renderGlossary();
-    });
-    host.append(button);
-  }
-}
-
 function renderTermPanel() {
   const t = termSelection;
-  const bookmarks = readBookmarks();
+  const bookmarks = storageRepo.readBookmarks();
+
   if (!t) {
     $('bookmark').disabled = true;
     $('term-name').textContent = 'Select a term';
@@ -152,21 +123,61 @@ function renderTermPanel() {
   $('term-related').textContent = `Related terms: ${t.related.join(', ')}`;
 }
 
-async function refreshReviewQueue() {
-  const attempts = Object.values(readAttempts());
-  const data = await post('/api/review-queue', { attempts });
+function renderGlossary() {
+  const host = $('term-list');
+  host.replaceChildren();
+  const terms = searchGlossary(lesson.glossary, $('term-search').value, $('term-category').value);
+  const bookmarks = storageRepo.readBookmarks();
+
+  for (const t of terms) {
+    const button = document.createElement('button');
+    button.className = `term-item ${termSelection?.id === t.id ? 'active' : ''}`;
+    button.type = 'button';
+    button.setAttribute('role', 'listitem');
+    button.textContent = `${bookmarks.has(t.id) ? '★ ' : ''}${t.term} · ${t.group}`;
+    button.addEventListener('click', () => {
+      termSelection = t;
+      renderTermPanel();
+      renderGlossary();
+    });
+    host.append(button);
+  }
+}
+
+function renderQueue(queue) {
   const host = $('queue');
   host.replaceChildren();
-  for (const item of data.queue) {
+  for (const item of queue) {
     const p = document.createElement('p');
     p.textContent = `• ${item.prompt}`;
     host.append(p);
   }
 }
 
+async function refreshReviewQueue() {
+  const attempts = Object.values(getAttemptMap());
+  const data = await post('/api/review-queue', { attempts });
+  storageRepo.writeReviewQueue(data.queue);
+  renderQueue(data.queue);
+}
+
+function applyLearner(id) {
+  learnerId = normalizeLearnerId(id);
+  storageRepo = createStorageRepo(localStorage, learnerId);
+  localStorage.setItem(storageRepo.keys.learnerId, learnerId);
+  $('learner-id').value = learnerId;
+
+  const persistedQueue = storageRepo.readReviewQueue();
+  renderQueue(persistedQueue);
+  renderScenario();
+  renderGlossary();
+  renderTermPanel();
+}
+
 async function init() {
   lesson = await (await fetch('/api/lesson/1')).json();
-  $('lesson-title').textContent = `${lesson.title}`;
+  $('lesson-title').textContent = lesson.title;
+  $('deployment-note').textContent = `${lesson.deploymentModeNote} (${lesson.solidityExecution.status})`;
 
   const categories = ['all', ...new Set(lesson.glossary.map(t => t.category))];
   $('term-category').replaceChildren(...categories.map(c => {
@@ -178,29 +189,46 @@ async function init() {
 
   currentScenarioId = lesson.scenarios[0].id;
   renderScenarios();
-  renderScenario();
-  renderGlossary();
-  renderTermPanel();
+
+  const defaultLearner = normalizeLearnerId(localStorage.getItem('web3-security-lab:lesson1:learner-id:v1') || 'local-single-user');
+  applyLearner(defaultLearner);
+
   refreshReviewQueue().catch(() => {});
 }
 
 $('save').addEventListener('click', () => saveAttempt());
+$('submit').addEventListener('click', () => {
+  saveAttempt({ submittedAt: new Date().toISOString() });
+  $('coach').textContent = 'Attempt submitted. You can now reveal outcome in independent mode.';
+});
+
+$('switch-learner').addEventListener('click', () => {
+  applyLearner($('learner-id').value);
+  $('coach').textContent = `Loaded learner profile: ${learnerId}`;
+});
+
 for (const id of ['prediction', 'invariant', 'evidence', 'explanation', 'support-level']) {
   $(id).addEventListener('input', () => { $('saved').textContent = 'Unsaved'; });
   $(id).addEventListener('change', () => { $('saved').textContent = 'Unsaved'; });
 }
 
 $('hint').addEventListener('click', () => {
-  const s = currentScenario();
+  const s = scenario();
+  const attempt = currentAttempt();
+  if (attempt.supportLevel === 'independent' && !attempt.submittedAt) {
+    $('hint-box').textContent = 'Independent mode: hints remain hidden until you submit your attempt.';
+    return;
+  }
+
   const used = hintsUsed[currentScenarioId] || 0;
   if (used >= s.hints.length) {
     $('hint-box').textContent = 'No more hints for this scenario.';
     return;
   }
-  const next = s.hints[used];
+
   hintsUsed[currentScenarioId] = used + 1;
   saveAttempt({ hintsUsed: hintsUsed[currentScenarioId] });
-  $('hint-box').textContent = `Hint ${hintsUsed[currentScenarioId]}: ${next}`;
+  $('hint-box').textContent = `Hint ${hintsUsed[currentScenarioId]}: ${s.hints[used]}`;
 });
 
 $('ask').addEventListener('click', async () => {
@@ -219,18 +247,33 @@ $('ask').addEventListener('click', async () => {
 });
 
 $('reveal').addEventListener('click', async () => {
+  const attempt = currentAttempt();
+  const submitted = Boolean(attempt.submittedAt);
+  const supportLevel = $('support-level').value;
+
+  if (!canReveal({ prediction: $('prediction').value, invariant: $('invariant').value, supportLevel, submitted })) {
+    $('outcome').textContent = supportLevel === 'independent' && !submitted
+      ? 'Independent mode requires submission before reveal, plus prediction and invariant.'
+      : 'Prediction and invariant must each be at least 20 characters before reveal.';
+    return;
+  }
+
   try {
     const data = await post('/api/reveal', {
       scenarioId: currentScenarioId,
       prediction: $('prediction').value,
-      invariant: $('invariant').value
+      invariant: $('invariant').value,
+      supportLevel,
+      submitted
     });
+
     saveAttempt({ outcomeStatus: data.outcomeStatus, outcomeLabel: data.outcomeLabel });
     $('outcome').textContent = [
       `Outcome (${data.outcomeStatus}): ${data.outcome}`,
       `Expected assertions: ${data.expectedAssertions.join(' | ')}`,
       `Trace question: ${data.traceQuestion}`,
       `Boundary question: ${data.limitQuestion}`,
+      `Solidity execution status: ${data.solidityExecutionStatus}`,
       `Reminder: ${data.reminder}`
     ].join('\n\n');
     refreshReviewQueue().catch(() => {});
@@ -247,13 +290,10 @@ $('term-search').addEventListener('input', renderGlossary);
 $('term-category').addEventListener('change', renderGlossary);
 $('bookmark').addEventListener('click', () => {
   if (!termSelection) return;
-  const set = readBookmarks();
-  if (set.has(termSelection.id)) set.delete(termSelection.id);
-  else set.add(termSelection.id);
-  writeBookmarks(set);
+  const next = toggleBookmark(storageRepo.readBookmarks(), termSelection.id);
+  storageRepo.writeBookmarks(next);
   renderTermPanel();
   renderGlossary();
-  refreshReviewQueue().catch(() => {});
 });
 
 init().catch(() => {

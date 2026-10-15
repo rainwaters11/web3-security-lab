@@ -11,6 +11,13 @@
     <aside class="left">
       <h1>Web3 Security Lab</h1>
       <p id="lesson-title" class="muted">Loading lesson…</p>
+      <p id="deployment-note" class="muted"></p>
+
+      <label for="learner-id">Learner ID (local profile key)</label>
+      <div class="row">
+        <input id="learner-id" type="text" placeholder="local-single-user">
+        <button id="switch-learner" class="btn secondary" type="button">Load</button>
+      </div>
 
       <label for="support-level">Support level</label>
       <select id="support-level">
@@ -21,7 +28,7 @@
 
       <h2>Scenario family</h2>
       <div id="scenario-list" class="scenario-list" role="list"></div>
-      <button id="review-queue" class="btn secondary">Refresh review queue</button>
+      <button id="review-queue" class="btn secondary" type="button">Refresh review queue</button>
       <div id="queue" class="queue" aria-live="polite"></div>
     </aside>
 
@@ -48,10 +55,11 @@
         <textarea id="explanation" placeholder="Explain the call flow and what it did not establish."></textarea>
 
         <div class="row">
-          <button id="save" class="btn">Save attempt</button>
-          <button id="hint" class="btn secondary">Next hint</button>
-          <button id="ask" class="btn secondary">Coach prompt</button>
-          <button id="reveal" class="btn">Reveal outcome</button>
+          <button id="save" class="btn" type="button">Save attempt</button>
+          <button id="submit" class="btn secondary" type="button">Submit attempt</button>
+          <button id="hint" class="btn secondary" type="button">Next hint</button>
+          <button id="ask" class="btn secondary" type="button">Coach prompt</button>
+          <button id="reveal" class="btn" type="button">Reveal outcome</button>
         </div>
 
         <p id="saved" class="muted">Unsaved</p>
@@ -76,11 +84,11 @@
         <p id="term-why"></p>
         <p id="term-misunderstanding"></p>
         <p id="term-related"></p>
-        <button id="bookmark" class="btn secondary" disabled>Bookmark term</button>
+        <button id="bookmark" class="btn secondary" type="button" disabled>Bookmark term</button>
       </section>
     </aside>
   </div>
 
-  <script src="/app.js" defer></script>
+  <script type="module" src="/app.js"></script>
 </body>
 </html>
