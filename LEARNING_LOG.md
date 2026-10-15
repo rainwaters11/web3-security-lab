@@ -2,11 +2,11 @@
 
 ## Session: 2026-10-15 (Kickoff)
 
-### What you identified independently
-- Predicted that in `SharedVault`, a single reentry attempt can occur but the full transaction may still revert when the outer subtraction underflows under Solidity checked arithmetic.
+### Reasoning practiced with guidance
+- Worked through recorded credit versus actual funds, the repeated call, the outer subtraction from zero, and rollback with conversational guidance. The learner correctly answered follow-up questions; independent transfer has not yet been assessed.
 
 ### Hints used
-- No scenario hint consumed yet in this run; prediction was provided directly.
+- Platform hint usage was not recorded for that conversation. Explanations and prompts were provided by the tutor, so this must not be counted as a no-hint independent attempt.
 
 ### Invariant and test evidence
 - Invariant: A transaction that reverts must not leave mutated recorded balances or reduced vault ETH for this setup.
@@ -37,9 +37,12 @@
 - Reentrant control flow alone is not equivalent to successful theft.
 - Predicted behavior must stay labeled predicted until local test/trace evidence confirms it.
 
-### What you can explain without assistance
+### Concepts practiced; independent assessment pending
 - Difference between reentrant call flow and reproduced theft.
 - Difference between recorded balances (`balanceOf`) and actual contract ETH (`address(this).balance`).
+
+### Attribution correction (2026-10-15)
+The original kickoff entry overstated independent performance. This correction distinguishes guided practice from independent evidence without changing the predicted technical outcome. The user's screenshot confirms Forge 1.5.1 is installed on her laptop; no completed Solidity test output has been recorded in this log yet.
 
 ### Follow-up exercise
 - Run scenario 1–3 commands locally and record exact pass/fail outputs and the real scenario-3 trace location of `Panic(0x11)`.
