@@ -7,20 +7,25 @@
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
+  <a class="skip-link" href="#learning-main">Skip to your lesson</a>
   <div class="layout">
     <aside class="left">
+      <p class="eyebrow">THE SECURITY WORKBENCH</p>
       <h1>Web3 Security Lab</h1>
+      <p class="brand-note">Investigate. Trace. Explain.</p>
       <p id="lesson-title" class="muted">Loading lesson…</p>
       <p id="deployment-note" class="muted"></p>
 
       <label for="learner-id">Learner ID (local profile key)</label>
+        <details class="help"><summary title="Use a consistent name, such as misty, then select Load. Notes and bookmarks belong to that profile in this browser. This is not a login or cloud backup. Save your current attempt before switching profiles.">About local profiles</summary><p id="learner-id-help">Use a consistent name, such as misty, then select Load. Notes and bookmarks belong to that profile in this browser. This is not a login or cloud backup. Save your current attempt before switching profiles.</p></details>
       <div class="row">
-        <input id="learner-id" type="text" placeholder="local-single-user">
-        <button id="switch-learner" class="btn secondary" type="button">Load</button>
+        <input id="learner-id" aria-describedby="learner-id-help" type="text" placeholder="local-single-user">
+        <button id="switch-learner" title="Load the named local profile. Save your current draft first." class="btn secondary" type="button">Load</button>
       </div>
 
       <label for="support-level">Support level</label>
-      <select id="support-level">
+        <details class="help"><summary title="Guided is for learning with support; Practice is for rehearsal; Independent asks you to submit before outcome reveal and restricts hints before submission. Definitions stay available. Choosing a mode does not certify mastery.">Which support level should I choose?</summary><p id="support-level-help">Guided is for learning with support; Practice is for rehearsal; Independent asks you to submit before outcome reveal and restricts hints before submission. Definitions stay available. Choosing a mode does not certify mastery.</p></details>
+      <select id="support-level" aria-describedby="support-level-help">
         <option value="guided">Guided</option>
         <option value="practice">Practice</option>
         <option value="independent">Independent</option>
@@ -28,41 +33,63 @@
 
       <h2>Scenario family</h2>
       <div id="scenario-list" class="scenario-list" role="list"></div>
-      <button id="review-queue" class="btn secondary" type="button">Refresh review queue</button>
+      <button id="review-queue" title="Refresh prompts for concepts to revisit. This is practice guidance, not a mastery score." class="btn secondary" type="button">Refresh review queue</button>
       <div id="queue" class="queue" aria-live="polite"></div>
     </aside>
 
-    <main class="main">
+    <main id="learning-main" class="main" tabindex="-1">
+      <section class="card orientation" aria-labelledby="start-title">
+        <p class="eyebrow">YOUR NEXT MOVE</p>
+        <h2 id="start-title">Build your case, one step at a time.</h2>
+        <p>Read the scenario. Predict what happens. State a rule to check. Then compare your thinking with evidence.</p>
+        <details class="help">
+          <summary title="Open a step-by-step guide to the learning workflow">New here? Start with this guide</summary>
+          <ol>
+            <li>Choose an active scenario and read its contract. Planned scenarios are previews.</li>
+            <li>Write a prediction and an invariant, each at least 20 characters. These record your reasoning; length alone does not prove correctness.</li>
+            <li>Save your draft before switching scenarios or profiles. In Independent mode, submit before revealing the outcome.</li>
+            <li>Run the displayed Forge command from the <code>foundry</code> folder in your terminal. This page does not execute Solidity.</li>
+            <li>Record the actual result, explain the trace, and identify what the test did not prove. Use the glossary whenever a term is unfamiliar.</li>
+          </ol>
+        </details>
+      </section>
       <section class="card">
         <h2 id="scenario-title">Scenario</h2>
         <p id="scenario-summary"></p>
+        <p class="command-note">Run this command in your terminal from <code>foundry/</code>. It is shown here for reference.</p>
         <p><strong>Local test:</strong> <code id="scenario-test"></code></p>
-        <pre><code id="source"></code></pre>
+        <pre tabindex="0" aria-label="Scenario Solidity source; scroll to read"><code id="source"></code></pre>
       </section>
 
       <section class="card">
         <h2>Your attempt</h2>
+        <p class="muted">Your reasoning comes first. Expand any help label, or hover over a button for a quick reminder.</p>
         <label for="prediction">Prediction (required before reveal)</label>
-        <textarea id="prediction" placeholder="What do you predict and why?"></textarea>
+        <details class="help"><summary title="Your best explanation of what will happen before you see the outcome. Name the caller, the amount, whether the call succeeds or reverts, and why. It is okay to revise your understanding after checking evidence.">What is a prediction?</summary><p id="prediction-help">Your best explanation of what will happen before you see the outcome. Name the caller, the amount, whether the call succeeds or reverts, and why. It is okay to revise your understanding after checking evidence.</p></details>
+        <textarea id="prediction" aria-describedby="prediction-help" placeholder="What do you predict and why?"></textarea>
 
         <label for="invariant">Invariant (required before reveal)</label>
-        <textarea id="invariant" placeholder="What rule must remain true?"></textarea>
+        <details class="help"><summary title="A rule that should hold at a stated checkpoint. Ask: whose funds or permissions must be protected, and when should I check the rule? Write the rule in your own words; a later test checks whether it holds.">What is an invariant?</summary><p id="invariant-help">A rule that should hold at a stated checkpoint. Ask: whose funds or permissions must be protected, and when should I check the rule? Write the rule in your own words; a later test checks whether it holds.</p></details>
+        <textarea id="invariant" aria-describedby="invariant-help" placeholder="What rule must remain true?"></textarea>
 
         <label for="evidence">Test evidence</label>
-        <textarea id="evidence" placeholder="What command/test path and what result?"></textarea>
+        <details class="help"><summary title="Record the exact command, test name, code version, tool versions, and actual result. If you have not run a test, say “not run.” A prediction, animation, or AI explanation is not an executed trace. A passing test supports only its checked path.">What counts as evidence?</summary><p id="evidence-help">Record the exact command, test name, code version, tool versions, and actual result. If you have not run a test, say “not run.” A prediction, animation, or AI explanation is not an executed trace. A passing test supports only its checked path.</p></details>
+        <textarea id="evidence" aria-describedby="evidence-help" placeholder="What command/test path and what result?"></textarea>
 
         <label for="explanation">Trace explanation in your own words</label>
-        <textarea id="explanation" placeholder="Explain the call flow and what it did not establish."></textarea>
+        <details class="help"><summary title="A trace is a step-by-step record of execution. Identify the caller, checks, external calls, state updates, and any failure. Explain which call’s changes were rolled back and what the final state shows. Describe the limits of the evidence.">How do I explain a trace?</summary><p id="explanation-help">A trace is a step-by-step record of execution. Identify the caller, checks, external calls, state updates, and any failure. Explain which call’s changes were rolled back and what the final state shows. Describe the limits of the evidence.</p></details>
+        <textarea id="explanation" aria-describedby="explanation-help" placeholder="Explain the call flow and what it did not establish."></textarea>
 
         <div class="row">
-          <button id="save" class="btn" type="button">Save attempt</button>
-          <button id="submit" class="btn secondary" type="button">Submit attempt</button>
-          <button id="hint" class="btn secondary" type="button">Next hint</button>
-          <button id="ask" class="btn secondary" type="button">Coach prompt</button>
-          <button id="reveal" class="btn" type="button">Reveal outcome</button>
+          <button id="save" title="Save the current draft in this browser under the loaded learner profile. Saving does not submit it." class="btn" type="button">Save attempt</button>
+          <button id="submit" title="Save and mark this attempt submitted. Independent mode requires submission before reveal; submission is not a grade." class="btn secondary" type="button">Submit attempt</button>
+          <button id="hint" title="Request the next scenario hint. Independent mode restricts hints before submission." class="btn secondary" type="button">Next hint</button>
+          <button id="ask" title="Ask the coach for a reasoning prompt. AI feedback is provisional, not test evidence." class="btn secondary" type="button">Coach prompt</button>
+          <button id="reveal" title="Show the teaching outcome after prediction and invariant requirements are met. This does not run Solidity." class="btn" type="button">Reveal outcome</button>
         </div>
 
-        <p id="saved" class="muted">Unsaved</p>
+        <details class="help action-guide"><summary>What do these buttons do?</summary><dl><dt>Save attempt</dt><dd>Save the current draft in this browser under the loaded learner profile. Saving does not submit it.</dd><dt>Submit attempt</dt><dd>Save and mark this attempt submitted. Independent mode requires submission before reveal; submission is not a grade.</dd><dt>Next hint</dt><dd>Request the next scenario hint. Independent mode restricts hints before submission.</dd><dt>Coach prompt</dt><dd>Ask the coach for a reasoning prompt. AI feedback is provisional, not test evidence.</dd><dt>Reveal outcome</dt><dd>Show the teaching outcome after prediction and invariant requirements are met. This does not run Solidity.</dd></dl></details>
+        <p id="saved" role="status" class="muted">Unsaved</p>
         <div id="coach" class="result"></div>
         <div id="hint-box" class="result"></div>
         <div id="outcome" class="result"></div>
@@ -70,8 +97,11 @@
     </main>
 
     <aside class="right">
-      <h2>Glossary</h2>
+      <h2>Field guide</h2>
+      <p class="muted">Your glossary: select a term for its meaning, example, and security relevance.</p>
+      <label class="muted" for="term-search">Find a definition</label>
       <input id="term-search" type="search" placeholder="Search term or concept">
+      <label class="muted" for="term-category">Filter by category</label>
       <select id="term-category">
         <option value="all">All categories</option>
       </select>
@@ -84,7 +114,7 @@
         <p id="term-why"></p>
         <p id="term-misunderstanding"></p>
         <p id="term-related"></p>
-        <button id="bookmark" class="btn secondary" type="button" disabled>Bookmark term</button>
+        <button id="bookmark" title="Save or remove this glossary term for the loaded local profile." class="btn secondary" type="button" disabled>Bookmark term</button>
       </section>
     </aside>
   </div>
