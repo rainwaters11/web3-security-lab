@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Web3 Security Lab</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="layout">
+    <aside class="left">
+      <h1>Web3 Security Lab</h1>
+      <p id="lesson-title" class="muted">Loading lesson…</p>
+      <p id="deployment-note" class="muted"></p>
+
+      <label for="learner-id">Learner ID (local profile key)</label>
+      <div class="row">
+        <input id="learner-id" type="text" placeholder="local-single-user">
+        <button id="switch-learner" class="btn secondary" type="button">Load</button>
+      </div>
+
+      <label for="support-level">Support level</label>
+      <select id="support-level">
+        <option value="guided">Guided</option>
+        <option value="practice">Practice</option>
+        <option value="independent">Independent</option>
+      </select>
+
+      <h2>Scenario family</h2>
+      <div id="scenario-list" class="scenario-list" role="list"></div>
+      <button id="review-queue" class="btn secondary" type="button">Refresh review queue</button>
+      <div id="queue" class="queue" aria-live="polite"></div>
+    </aside>
+
+    <main class="main">
+      <section class="card">
+        <h2 id="scenario-title">Scenario</h2>
+        <p id="scenario-summary"></p>
+        <p><strong>Local test:</strong> <code id="scenario-test"></code></p>
+        <pre><code id="source"></code></pre>
+      </section>
+
+      <section class="card">
+        <h2>Your attempt</h2>
+        <label for="prediction">Prediction (required before reveal)</label>
+        <textarea id="prediction" placeholder="What do you predict and why?"></textarea>
+
+        <label for="invariant">Invariant (required before reveal)</label>
+        <textarea id="invariant" placeholder="What rule must remain true?"></textarea>
+
+        <label for="evidence">Test evidence</label>
+        <textarea id="evidence" placeholder="What command/test path and what result?"></textarea>
+
+        <label for="explanation">Trace explanation in your own words</label>
+        <textarea id="explanation" placeholder="Explain the call flow and what it did not establish."></textarea>
+
+        <div class="row">
+          <button id="save" class="btn" type="button">Save attempt</button>
+          <button id="submit" class="btn secondary" type="button">Submit attempt</button>
+          <button id="hint" class="btn secondary" type="button">Next hint</button>
+          <button id="ask" class="btn secondary" type="button">Coach prompt</button>
+          <button id="reveal" class="btn" type="button">Reveal outcome</button>
+        </div>
+
+        <p id="saved" class="muted">Unsaved</p>
+        <div id="coach" class="result"></div>
+        <div id="hint-box" class="result"></div>
+        <div id="outcome" class="result"></div>
+      </section>
+    </main>
+
+    <aside class="right">
+      <h2>Glossary</h2>
+      <input id="term-search" type="search" placeholder="Search term or concept">
+      <select id="term-category">
+        <option value="all">All categories</option>
+      </select>
+      <div id="term-list" class="term-list" role="list"></div>
+      <section id="term-panel" class="card" aria-live="polite">
+        <h3 id="term-name">Select a term</h3>
+        <p id="term-definition"></p>
+        <p id="term-technical"></p>
+        <p id="term-example"></p>
+        <p id="term-why"></p>
+        <p id="term-misunderstanding"></p>
+        <p id="term-related"></p>
+        <button id="bookmark" class="btn secondary" type="button" disabled>Bookmark term</button>
+      </section>
+    </aside>
+  </div>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
