@@ -3,7 +3,9 @@
 This increment updates the main dashboard in public/index.html and public/style.css. It does not integrate the separate vault room.
 
 ## Learner experience
-- Start-here guide explains the learning sequence and where to run Forge.
+- Visible first-task header appears before scenario navigation, including on mobile: locate SharedVault and its three functions, explore the contract parts, read scenario 1, then predict.
+- Contract anatomy reference explains 12 building blocks with examples from SharedVault, plus optional features not declared in this contract. It is structural help, not a scenario solution.
+- Evidence and trace fields are grouped under “After testing” to reduce the initial task to prediction and invariant. Existing field IDs and persistence are preserved.
 - Expandable native details give plain definitions for prediction, invariant, evidence, trace explanation, local profiles and support levels. Click, tap or focus the summary and press Enter/Space.
 - Action buttons have short native hover reminders. The expandable button guide repeats the instructions for touch and keyboard users; hover is not required.
 - Definitions provide process guidance rather than scenario solutions, including in Independent mode.
@@ -30,9 +32,10 @@ Playwright launch was attempted but blocked because Chromium is absent. Desktop,
 Manual acceptance before merge:
 1. Run npm start and open http://127.0.0.1:3000.
 2. At desktop and 390px width, check readable labels, no page-wide overflow and usable source-code scrolling.
-3. Tab from the skip link through the page. Open and close help with Enter/Space and check visible gold focus.
-4. On touch, open every help section and the button guide. All guidance must be available without hover.
-5. Save a draft, switch scenarios and return, then refresh. Confirm saved content and glossary bookmarks persist.
-6. Check existing reveal/submission gates in Guided and Independent modes. UI descriptions do not bypass validation.
+3. Confirm the first task is visible without opening help. Follow “Begin” to the contract reference and expand each part. Confirm examples match the source.
+4. Tab from the skip link through the page. Open and close help with Enter/Space and check visible gold focus.
+5. On touch, open every help section and the button guide. All guidance must be available without hover.
+6. Save a draft, switch scenarios and return, then refresh. Confirm saved content and glossary bookmarks persist.
+7. Check existing reveal/submission gates in Guided and Independent modes. UI descriptions do not bypass validation.
 
 Solidity execution labels still come from the existing API. The newer CI evidence in foundry/lesson1/README.md does not automatically update those runtime labels; reconcile them as part of the planned integration.

@@ -146,3 +146,24 @@ textarea { min-height: 100px; resize: vertical; }
   .left, .right, .card { padding: 16px; }
   .orientation h2 { font-size: 1.4rem; }
 }
+/* A visible first task precedes scenario navigation, including on narrow screens. */
+.learning-start { margin: 20px 20px 0; max-width: 1760px; }
+.learning-start p { max-width: 88ch; }
+.learning-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; padding-left: 24px; }
+.learning-steps li { padding-left: 4px; }
+.learning-steps strong { color: var(--gold); display: block; }
+.start-link { display: inline-block; color: var(--mint); padding: 10px 0; font-weight: 700; }
+.contract-parts { scroll-margin-top: 20px; }
+.contract-part { border-top: 1px solid var(--line); padding: 6px 0; }
+.contract-part summary, .later-work > summary { padding: 10px 0; cursor: pointer; color: var(--mint); min-height: 44px; }
+.contract-part summary:hover, .later-work > summary:hover { color: var(--gold); }
+.contract-part code { display: block; color: var(--gold); background: #071121; padding: 10px; border-radius: 8px; overflow-wrap: anywhere; }
+.contract-part p, .contract-part dd { color: var(--muted); font-size: .94rem; }
+.contract-part dt { color: var(--gold); font-weight: 650; margin-top: 12px; }
+.contract-part dd { margin-left: 0; }
+.later-work { margin: 12px 0; border-block: 1px solid var(--line); }
+@media (min-width: 1800px) { .learning-start { margin-inline: auto; } }
+@media (max-width: 760px) {
+  .learning-start { margin: 12px 12px 0; }
+  .learning-steps { grid-template-columns: 1fr; gap: 12px; }
+}
